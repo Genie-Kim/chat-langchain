@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <title>Chat Your Data</title>
     <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <script type="module" src="https://md-block.verou.me/md-block.js"></script>
     <style>
         .chat-body {
+            position: relative;
+
             width: 550px;
             margin: 50px auto;
         }
@@ -49,12 +53,26 @@
         .form-message {
           margin-top: 10px;
         }
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            cursor: nwse-resize;
+            border-radius: 3px;
+            user-drag: none;
+        }
     </style>
     <script>
-        var endpoint = "ws://localhost:9000/chat";
+        var endpoint = "ws://localhost:9001/chat";
         var ws = new WebSocket(endpoint);
         // Receive message from server word by word. Display the words as they are received.
+
         ws.onmessage = function (event) {
+            var converter = new showdown.Converter();
+
             var messages = document.getElementById('messages');
             var data = JSON.parse(event.data);
             if (data.sender === "bot") {
@@ -71,20 +89,15 @@
                     var header = document.getElementById('header');
                     header.innerHTML = "Chatbot is typing...";
                     var p = messages.lastChild.lastChild;
-                    if (data.message === "\n") {
-                        p.innerHTML += "<br>";
-                    } else {
-                        p.innerHTML += data.message;
-                    }
-                } else if (data.type === "info") {
-                    var header = document.getElementById('header');
-                    header.innerHTML = data.message;
+                    p.innerHTML += data.message.replace(/\n/g, "<br>");
+
                 } else if (data.type === "end") {
                     var header = document.getElementById('header');
                     header.innerHTML = "Ask a question";
                     var button = document.getElementById('send');
                     button.innerHTML = "Send";
                     button.disabled = false;
+
                 } else if (data.type === "error") {
                     var header = document.getElementById('header');
                     header.innerHTML = "Ask a question";
@@ -92,20 +105,24 @@
                     button.innerHTML = "Send";
                     button.disabled = false;
                     var p = messages.lastChild.lastChild;
-                    p.innerHTML += data.message;
+                    p.innerHTML += data.message.replace(/\n/g, "<br>");
+
+
                 }
             } else {
                 var div = document.createElement('div');
                 div.className = 'client-message';
                 var p = document.createElement('p');
                 p.innerHTML = "<strong>" + "You: " + "</strong>";
-                p.innerHTML += data.message;
+                p.innerHTML += data.message.replace(/\n/g, "<br>");
                 div.appendChild(p);
                 messages.appendChild(div);
             }
             // Scroll to the bottom of the chat
             messages.scrollTop = messages.scrollHeight;
         };
+        
+        
         // Send message to server
         function sendMessage(event) {
             event.preventDefault();
@@ -121,6 +138,36 @@
             button.innerHTML = "Loading...";
             button.disabled = true;
         }
+        function initResize() {
+            const chatBody = document.querySelector('.chat-body');
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            chatBody.appendChild(resizeHandle);
+
+            let isResizing = false;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = e.clientX - chatBody.offsetLeft;
+                const newHeight = e.clientY - chatBody.offsetTop;
+                chatBody.style.width = newWidth + 'px';
+                chatBody.style.height = newHeight + 'px';
+            });
+
+            window.addEventListener('mouseup', () => {
+                isResizing = false;
+            });
+        }
+
+        // Initialize the resize function when the page is loaded
+        window.addEventListener('load', () => {
+            initResize();
+        });
     </script>
 </head>
 <body class="bg-black">

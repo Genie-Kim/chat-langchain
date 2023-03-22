@@ -2,7 +2,9 @@
 from langchain.callbacks.base import AsyncCallbackManager
 from langchain.callbacks.tracers import LangChainTracer
 from langchain.chains import ChatVectorDBChain
-from langchain.chains.chat_vector_db.prompts import (CONDENSE_QUESTION_PROMPT,
+# from langchain.chains.chat_vector_db.prompts import (CONDENSE_QUESTION_PROMPT,
+#                                                      QA_PROMPT)
+from custom_prompt import (CONDENSE_QUESTION_PROMPT,
                                                      QA_PROMPT)
 from langchain.chains.llm import LLMChain
 from langchain.chains.question_answering import load_qa_chain
@@ -30,12 +32,15 @@ def get_chain(
         temperature=0,
         verbose=True,
         callback_manager=question_manager,
+        model_name="gpt-3.5-turbo"
+        # model_name="text-davinci-003"
     )
     streaming_llm = OpenAI(
         streaming=True,
         callback_manager=stream_manager,
         verbose=True,
         temperature=0,
+        model_name="gpt-3.5-turbo"
     )
 
     question_generator = LLMChain(
@@ -43,6 +48,7 @@ def get_chain(
     )
     doc_chain = load_qa_chain(
         streaming_llm, chain_type="stuff", prompt=QA_PROMPT, callback_manager=manager
+        # streaming_llm, chain_type="map_reduce", prompt=QA_PROMPT, callback_manager=manager
     )
 
     qa = ChatVectorDBChain(
