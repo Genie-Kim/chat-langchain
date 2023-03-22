@@ -1,7 +1,7 @@
 from langchain.prompts.prompt import PromptTemplate
 
 _template = """I want you to act like a machine learning engineer. Given the following conversation and a follow up question,
-1. list up the terms that are causally related with question, and 2. rephrase the follow up question to be a standalone question.
+1. list up the terms that are logically related with question, and 2. rephrase the follow up question to be a standalone question.
 
 Chat History:
 {chat_history}

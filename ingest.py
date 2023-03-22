@@ -16,7 +16,7 @@ def ingest_docs():
     # loader = ReadTheDocsLoader("langchain.readthedocs.io/en/latest/")
     # loader = UnstructuredPDFLoader("mydocs/gpt-4.pdf")
     # loader = UnstructuredPDFLoader("https://arxiv.org/pdf/2302.03803.pdf",mode="elements")
-    loader = UnstructuredPDFLoader("mydocs/VisualChatGPT.pdf", mode="elements")
+    loader = UnstructuredPDFLoader("mydocs/material.pdf", mode="elements")
 
     raw_documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
