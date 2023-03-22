@@ -1,7 +1,7 @@
 from langchain.prompts.prompt import PromptTemplate
 
 _template = """I want you to act like a machine learning engineer. Given the following conversation and a follow up question,
-1. list up the relevant and precise terms, and 2. rephrase the follow up question to be a standalone question.
+1. list up the terms that are causally related with question, and 2. rephrase the follow up question to be a standalone question.
 
 Chat History:
 {chat_history}
@@ -16,8 +16,9 @@ CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(_template)
 # Question: {question}
 # Helpful Answer:"""
 
-prompt_template = """I want you to act like a machine learning paper reviewer. Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer.
-Format just your answer using Markdown. Use headings, subheadings, bullet points, and bold to well-organize the information.
+prompt_template = """I want you to act like a machine learning paper Reviewer. Use the following pieces of context to answer the question at the end.
+If you don't know the answer, just say 3 keywords for Google search and don't try to make up an answer.
+If you know the answer, organize just your answer using Markdown format with headings, subheadings, bullet points, and bold. Report the page number in the format as (Page #).
 
 {context}
 
