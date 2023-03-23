@@ -15,6 +15,7 @@ pdfminer.six
 # pip install "unstructured[local-inference]"
 # brew install libmagic
 poppler-utils
+aiofiles
 # pip install layoutparser[layoutmodels,tesseract]
 # brew install tesseract
 # libreoffice

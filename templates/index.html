@@ -168,6 +168,39 @@
         window.addEventListener('load', () => {
             initResize();
         });
+        
+        function downloadPdf(event) {
+            event.preventDefault();
+            const pdfUrl = document.getElementById('pdfUrl').value;
+            if (pdfUrl === "") {
+                return;
+            }
+        
+            // Make a request to the backend to download and save the PDF
+            fetch('/save_pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: pdfUrl })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('PDF saved successfully!');
+                } else {
+                    alert('Error saving PDF. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving PDF. Please try again.');
+            });
+        
+            // Clear the input field
+            document.getElementById('pdfUrl').value = "";
+        }
+
+
     </script>
 </head>
 <body class="bg-black">
@@ -183,6 +216,13 @@
                 <button id="send" type="submit" class="btn btn-primary">Send</button>
             </form>
         </div>
+    </div>
+    <div class="pdf-download mt-5">
+        <h4 class="text-center text-xl font-medium"> PDF Downloader </h4>
+        <form action="" class="form-inline mt-5" id="pdf-form" onsubmit="downloadPdf(event)">
+            <input type="text" class="form-control" placeholder="Enter PDF URL" id="pdfUrl">
+            <button type="submit" class="btn btn-primary">Save PDF</button>
+        </form>
     </div>
 </body>
 </html>

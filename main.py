@@ -3,6 +3,10 @@ import logging
 import pickle
 from pathlib import Path
 from typing import Optional
+import httpx
+import aiofiles
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, BackgroundTasks
+from pydantic import BaseModel
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.templating import Jinja2Templates
@@ -72,7 +76,31 @@ async def websocket_endpoint(websocket: WebSocket):
                 type="error",
             )
             await websocket.send_json(resp.dict())
+            
+# Add this class to define the schema for PDF download requests
+class PdfUrl(BaseModel):
+    url: str
 
+# Add this function to download and save the PDF
+async def download_pdf(url: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        if response.status_code != 200:
+            raise ValueError("Failed to download PDF")
+
+        file_name = url.split("/")[-1]
+        async with aiofiles.open(f"downloads/{file_name}", "wb") as file:
+            await file.write(response.content)
+
+# Add this route to handle PDF download requests
+@app.post("/save_pdf")
+async def save_pdf(pdf_url: PdfUrl, background_tasks: BackgroundTasks):
+    try:
+        background_tasks.add_task(download_pdf, pdf_url.url)
+        return {"status": "success"}
+    except Exception as e:
+        print(e)
+        return {"status": "error"}
 
 if __name__ == "__main__":
     import uvicorn
