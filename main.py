@@ -1,40 +1,56 @@
-"""Main entrypoint for the app."""
 import logging
 import pickle
 from pathlib import Path
 from typing import Optional
 import httpx
 import aiofiles
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from langchain.vectorstores import VectorStore
-
 from callback import QuestionGenCallbackHandler, StreamingLLMCallbackHandler
 from query_data import get_chain
 from schemas import ChatResponse
+import os
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 vectorstore: Optional[VectorStore] = None
 
 
+def merge_pkl_files(input_path, output_path):
+    merged_data = []
+
+    # Iterate through all files in the input_path
+    for filename in os.listdir(input_path):
+        if filename.endswith(".pkl"):
+            # Load data from the pickle file
+            with open(os.path.join(input_path, filename), 'rb') as f:
+                data = pickle.load(f)
+                merged_data.extend(data)
+
+    # Save the merged data to the output_path
+    with open(output_path, 'wb') as f:
+        pickle.dump(merged_data, f)
+
+
+
 @app.on_event("startup")
 async def startup_event():
     logging.info("loading vectorstore")
     if not Path("vectorstore.pkl").exists():
-        raise ValueError("vectorstore.pkl does not exist, please run ingest.py first")
+        # raise ValueError("vectorstore.pkl does not exist, please run ingest.py first")
+        input_path = "vector_drive"
+        output_path = "vectorstore.pkl"
+        merge_pkl_files(input_path, output_path)
     with open("vectorstore.pkl", "rb") as f:
         global vectorstore
         vectorstore = pickle.load(f)
 
-
 @app.get("/")
 async def get(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-
 
 @app.websocket("/chat")
 async def websocket_endpoint(websocket: WebSocket):
@@ -42,19 +58,14 @@ async def websocket_endpoint(websocket: WebSocket):
     question_handler = QuestionGenCallbackHandler(websocket)
     stream_handler = StreamingLLMCallbackHandler(websocket)
     chat_history = []
-    # qa_chain = get_chain(vectorstore, question_handler, stream_handler)
-    # Use the below line instead of the above line to enable tracing
-    # Ensure `langchain-server` is running
     qa_chain = get_chain(vectorstore, question_handler, stream_handler, tracing=True)
 
     while True:
         try:
-            # Receive and send back the client message
             question = await websocket.receive_text()
             resp = ChatResponse(sender="you", message=question, type="stream")
             await websocket.send_json(resp.dict())
 
-            # Construct a response
             start_resp = ChatResponse(sender="bot", message="", type="start")
             await websocket.send_json(start_resp.dict())
 
@@ -76,33 +87,31 @@ async def websocket_endpoint(websocket: WebSocket):
                 type="error",
             )
             await websocket.send_json(resp.dict())
-            
-# Add this class to define the schema for PDF download requests
-class PdfUrl(BaseModel):
+class SavePdfRequest(BaseModel):
     url: str
+    name: str
 
-# Add this function to download and save the PDF
-async def download_pdf(url: str):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        if response.status_code != 200:
-            raise ValueError("Failed to download PDF")
-
-        file_name = url.split("/")[-1]
-        async with aiofiles.open(f"downloads/{file_name}", "wb") as file:
-            await file.write(response.content)
-
-# Add this route to handle PDF download requests
 @app.post("/save_pdf")
-async def save_pdf(pdf_url: PdfUrl, background_tasks: BackgroundTasks):
+async def save_pdf(request: SavePdfRequest):
+    url = request.url
+    name = request.name
     try:
-        background_tasks.add_task(download_pdf, pdf_url.url)
-        return {"status": "success"}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            # find the filename from the response
+            
+        if response.status_code == 200:
+            async with aiofiles.open(f'downloads/{name}.pdf', 'wb') as f:
+                await f.write(response.content)
+        else:
+            raise HTTPException(status_code=400, detail=f"Error downloading PDF: Status code {response.status_code}")
+
     except Exception as e:
-        print(e)
-        return {"status": "error"}
+        return JSONResponse(content={'success': False, 'message': 'Error saving PDF: ' + str(e)}, status_code=400)
+
+    return JSONResponse(content={'success': True, 'message': 'PDF saved successfully.'}, status_code=200)
+
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=9001)

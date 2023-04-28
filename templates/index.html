@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Chat Your Data</title>
     <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <script src="  https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     <script type="module" src="https://md-block.verou.me/md-block.js"></script>
     <style>
         .chat-body {
@@ -64,17 +64,61 @@
             border-radius: 3px;
             user-drag: none;
         }
+        .white-text {
+            color: white;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 1em;
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+        }
+        
     </style>
     <script>
         var endpoint = "ws://localhost:9001/chat";
         var ws = new WebSocket(endpoint);
         // Receive message from server word by word. Display the words as they are received.
 
+        showdown.extension('header-styles', function () {
+            return [
+                {
+                type: 'output',
+                regex: /<(h[1-6])[^>]*>(.*?)<\/\1>/g,
+                replace: function (match, tag, content) {
+                    var fontSize;
+                    switch (tag) {
+                    case 'h1':
+                        fontSize = '2em';
+                        break;
+                    case 'h2':
+                        fontSize = '1.5em';
+                        break;
+                    case 'h3':
+                        fontSize = '1.17em';
+                        break;
+                    case 'h4':
+                        fontSize = '1.0em';
+                        break;
+                    case 'h5':
+                        fontSize = '0.83em';
+                        break;
+                    case 'h6':
+                        fontSize = '0.67em';
+                        break;
+                    default:
+                        fontSize = '1em';
+                    }
+                    return '<span style="font-size:' + fontSize + '; font-weight:bold;">' + "<br>"+ content + '</span>';
+                }
+                }
+            ];
+            });
+            
         ws.onmessage = function (event) {
-            var converter = new showdown.Converter();
-
             var messages = document.getElementById('messages');
             var data = JSON.parse(event.data);
+        
             if (data.sender === "bot") {
                 if (data.type === "start") {
                     var header = document.getElementById('header');
@@ -90,14 +134,20 @@
                     header.innerHTML = "Chatbot is typing...";
                     var p = messages.lastChild.lastChild;
                     p.innerHTML += data.message.replace(/\n/g, "<br>");
-
+        
                 } else if (data.type === "end") {
+                    var converter = new showdown.Converter({ extensions: ['header-styles'], tables: true, tasklists: true, requireSpaceBeforeHeadingText: true,ghCodeBlocks:true});
+                    var p = messages.lastChild.lastChild;
+                    var markdownMessage = p.innerHTML.replace("<strong>Chatbot: </strong>", "").replace(/<br>/g, "\n");
+                    var htmlMessage = converter.makeHtml(markdownMessage);
+                    p.innerHTML = "<strong>Chatbot: </strong>" + htmlMessage;
+        
                     var header = document.getElementById('header');
                     header.innerHTML = "Ask a question";
                     var button = document.getElementById('send');
                     button.innerHTML = "Send";
                     button.disabled = false;
-
+        
                 } else if (data.type === "error") {
                     var header = document.getElementById('header');
                     header.innerHTML = "Ask a question";
@@ -106,8 +156,7 @@
                     button.disabled = false;
                     var p = messages.lastChild.lastChild;
                     p.innerHTML += data.message.replace(/\n/g, "<br>");
-
-
+        
                 }
             } else {
                 var div = document.createElement('div');
@@ -121,7 +170,6 @@
             // Scroll to the bottom of the chat
             messages.scrollTop = messages.scrollHeight;
         };
-        
         
         // Send message to server
         function sendMessage(event) {
@@ -172,7 +220,8 @@
         function downloadPdf(event) {
             event.preventDefault();
             const pdfUrl = document.getElementById('pdfUrl').value;
-            if (pdfUrl === "") {
+            const pdfName = document.getElementById('pdfName').value;
+            if (pdfUrl === "" || pdfName === "") {
                 return;
             }
         
@@ -182,7 +231,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ url: pdfUrl })
+                body: JSON.stringify({ url: pdfUrl, name: pdfName })
             })
             .then(response => {
                 if (response.ok) {
@@ -196,9 +245,11 @@
                 alert('Error saving PDF. Please try again.');
             });
         
-            // Clear the input field
+            // Clear the input fields
             document.getElementById('pdfUrl').value = "";
+            document.getElementById('pdfName').value = "";
         }
+        
 
 
     </script>
@@ -218,10 +269,11 @@
         </div>
     </div>
     <div class="pdf-download mt-5">
-        <h4 class="text-center text-xl font-medium"> PDF Downloader </h4>
+        <h4 class="text-center text-xl font-medium white-text">PDF Downloader</h4>
         <form action="" class="form-inline mt-5" id="pdf-form" onsubmit="downloadPdf(event)">
             <input type="text" class="form-control" placeholder="Enter PDF URL" id="pdfUrl">
-            <button type="submit" class="btn btn-primary">Save PDF</button>
+            <input type="text" class="form-control" placeholder="Enter PDF Name" id="pdfName">
+            <button type="submit" class="btn btn-primary white-text">Save PDF</button>
         </form>
     </div>
 </body>

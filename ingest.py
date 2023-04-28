@@ -11,12 +11,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 
 
-def ingest_docs():
+def ingest_docs(pdf_text):
     """Get documents from web pages."""
+    
     # loader = ReadTheDocsLoader("langchain.readthedocs.io/en/latest/")
-    # loader = UnstructuredPDFLoader("mydocs/gpt-4.pdf")
-    # loader = UnstructuredPDFLoader("https://arxiv.org/pdf/2302.03803.pdf",mode="elements")
-    loader = UnstructuredPDFLoader("mydocs/material.pdf", mode="elements")
+    loader = UnstructuredPDFLoader(pdf_text, mode="elements")   
 
     raw_documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
@@ -27,11 +26,31 @@ def ingest_docs():
     embeddings = OpenAIEmbeddings()
     vectorstore = FAISS.from_documents(documents, embeddings)
 
+    
+    # parse the pdf file's name
+    pdf_name = pdf_text.split("/")[-1]
+    pdf_name = pdf_name.split(".")[0] 
+    print(pdf_name)
+    
     # Save vectorstore
-    with open("vectorstore.pkl", "wb") as f:
+    with open(f"vector_drive/{pdf_name}.pkl", "wb") as f:
         pickle.dump(vectorstore, f)
 
 
 if __name__ == "__main__":
+    # get params from command line
+    import argparse
+    import os
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pdf', type=str, default=None)
+    args = parser.parse_args()
     
-    ingest_docs()
+    if args.pdf is not None:
+        ingest_docs(f'downloads/{args.pdf}')
+    else:
+        for filename in os.listdir("downloads"):
+            if filename.endswith(".pdf"):
+            # Load data from the pickle file
+                with open(os.path.join("downloads", filename), 'rb') as f:
+                    ingest_docs(f'downloads/{filename}')
+    

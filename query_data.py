@@ -32,7 +32,8 @@ def get_chain(
         temperature=0,
         verbose=True,
         callback_manager=question_manager,
-        model_name="gpt-3.5-turbo"
+        # model_name="gpt-3.5-turbo"
+        model_name="gpt-4"
         # model_name="text-davinci-003"
     )
     streaming_llm = OpenAI(
@@ -40,7 +41,8 @@ def get_chain(
         callback_manager=stream_manager,
         verbose=True,
         temperature=0,
-        model_name="gpt-3.5-turbo"
+        # model_name="gpt-3.5-turbo"
+        model_name="gpt-4"
     )
 
     question_generator = LLMChain(
