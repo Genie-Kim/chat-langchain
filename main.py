@@ -20,7 +20,7 @@ vectorstore: Optional[VectorStore] = None
 
 
 def merge_pkl_files(input_path, output_path):
-    merged_data = []
+    merged_data =None
 
     # Iterate through all files in the input_path
     for filename in os.listdir(input_path):
@@ -28,7 +28,10 @@ def merge_pkl_files(input_path, output_path):
             # Load data from the pickle file
             with open(os.path.join(input_path, filename), 'rb') as f:
                 data = pickle.load(f)
-                merged_data.extend(data)
+                if merged_data is None:
+                    merged_data = data
+                else:
+                    merged_data.merge_from(data)
 
     # Save the merged data to the output_path
     with open(output_path, 'wb') as f:
